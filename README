@@ -1,0 +1,34 @@
+Scope
+
+Create a stand alone program that make all modifications for me without me having to have any interaction other than giving file names. No loading of additional programs or manual manipulation of files. I have an e-commerce site using creloaded 6.5. All the data is in various tables that I can export to xls or csv.
+
+
+
+These are the Source Tables
+
+categories
+categories_description
+
+manufacturers
+manufacturers_info
+
+products
+products_description
+products_to_category
+products_extra_fields
+
+
+I get an update file from my supplier called dealer.txt. I need the following done
+
+1- delete any items that have a 0 cost
+2- if a part already exists then update that field with the information from the dealer.txt
+3- read the name of the category name and put in the field a pre-assigned category number from the existing table
+4- Same for manufacturers
+5- if a product from dealer.txt is not found then it must be added to the products and associated files (that means its a new item than was not found in the existing table)
+6- if category or manufacturer is not found then a new one of each must be created in the associated table.
+
+Once this is all done I should have an XLS file with the given structure and the records updated in this file from the dealer.txt file.
+
+I have just over 4000 items at the moment to process.
+
+I can send sample files upon request
