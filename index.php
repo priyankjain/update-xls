@@ -102,6 +102,12 @@ foreach($files as $key=>$value){
 		$smallimageurl = "pyr/".end($url);
 		$category_name = $tokens[19];
 		$manu_name = $tokens[2];
+		$description=str_replace("\"", "", $description);
+		$mainimageurl=str_replace("\"", "", $mainimageurl);
+		$smallimageurl=str_replace("\"", "", $smallimageurl);
+		$productname=str_replace("\"", "", $productname);
+		$category_name=str_replace("\"", "", $category_name);
+		$manu_name=str_replace("\"", "", $manu_name);
 		$description=addslashes($description);
 		$mainimageurl = addslashes($mainimageurl);
 		$smallimageurl = addslashes($smallimageurl);
@@ -113,6 +119,7 @@ foreach($files as $key=>$value){
 		$result = $mysqli->query("select categories_id from `categories_description` where `categories_name` = '".$category_name."'") or die("Error getting category id");
 		//Create a new row in categories_description if needed
 		if($result->num_rows == 0){
+			echo $category_name;
 			$mysqli->query("insert into `categories_description`(`language_id`,`categories_name`,`categories_heading_title`,`categories_description`,`categories_head_title_tag`,`categories_head_desc_tag`,`categories_head_keywords_tag`,`categories_htc_title_tag`,`categories_htc_desc_tag`,`categories_htc_keywords_tag`,`categories_htc_description`) values('1','".$category_name."','".$category_name."','','','','','','','','');") or die("Error inserting new category"); 
 			$category_id = $mysqli->insert_id;
 			fwrite($new_categories,$category_id.PHP_EOL);
@@ -172,14 +179,14 @@ foreach($files as $key=>$value){
 					$arraykeys = array_keys($row);
 					$line = '`'.implode("`;`",$arraykeys).'`';
 					fwrite($file,$line.PHP_EOL);
-					$count++;
 				}
 				$arrayvals = array_values($row);
 				$line = '`'.implode("`;`",$arrayvals).'`';
 				fwrite($file,$line.PHP_EOL);
+				$count++;
 			}
 			fclose($file);
-			echo 'Output '.$key." <a target='_blank' href='download.php?file=".$key."'>".$key."</a><br/>";
+			echo 'Lines: '.$count.' Output '.$key." <a target='_blank' href='download.php?file=".$key."'>".$key."</a><br/>";
 		}
 // 		$mysqli->query("SELECT CONCAT(GROUP_CONCAT(COLUMN_NAME SEPARATOR ';'), '\n')
 // FROM INFORMATION_SCHEMA.COLUMNS
