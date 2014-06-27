@@ -1,5 +1,5 @@
 <?php
-
+ini_set('auto_detect_line_endings', true);
 if ( isset($_POST["submit"]) ) {
 //Delete existing files in upload folder
 $path=getcwd().'/upload/';
@@ -77,15 +77,14 @@ foreach($files as $key=>$value){
 	    closedir($handle);
 	}
 	$txt_file=fopen(getcwd()."/upload/dealer.txt","r");
-	if(is_null($txt_file)) echo "Could not open dealer.txt";
-	fgets($txt_file);
+	$line = fgets($txt_file);
 	$new_products=fopen(getcwd()."/output/new_products.txt","w");
 	$new_categories=fopen(getcwd()."/output/new_categories.txt","w");
 	$new_manufacturers=fopen(getcwd()."/output/new_manufacturers.txt","w");
 	$line_no = 1;
 	while(!feof($txt_file))
 	{
-		echo "Processing...<br/>";
+
 		$line=fgets($txt_file);
 		$tokens= explode("\t",$line);
 		$col=36;
@@ -103,12 +102,18 @@ foreach($files as $key=>$value){
 		$smallimageurl = "pyr/".end($url);
 		$category_name = $tokens[19];
 		$manu_name = $tokens[2];
+		$description=addslashes($description);
+		$mainimageurl = addslashes($mainimageurl);
+		$smallimageurl = addslashes($smallimageurl);
+		$productname = addslashes($productname);
+		$category_name = addslashes($category_name);
+		$manu_name=addslashes($manu_name);
 		$category_id="";
 		$manu_id = "";
 		$result = $mysqli->query("select categories_id from `categories_description` where `categories_name` = '".$category_name."'") or die("Error getting category id");
 		//Create a new row in categories_description if needed
 		if($result->num_rows == 0){
-			$mysqli->query("insert into `categories_description`(`language_id`,`categories_name`,`categories_heading_title`,`categories_description`,`categories_head_title_tag`,`categories_head_desc_tag`,`categories_head_keywords_tag`,`categories_htc_title_tag`,`categories_htc_desc_tag`,`categories_htc_keywords_tag`,`categories_htc_description`) values('1','".$category_name."','".$category_name."','','','','','','','');") or die("Error inserting new category"); 
+			$mysqli->query("insert into `categories_description`(`language_id`,`categories_name`,`categories_heading_title`,`categories_description`,`categories_head_title_tag`,`categories_head_desc_tag`,`categories_head_keywords_tag`,`categories_htc_title_tag`,`categories_htc_desc_tag`,`categories_htc_keywords_tag`,`categories_htc_description`) values('1','".$category_name."','".$category_name."','','','','','','','','');") or die("Error inserting new category"); 
 			$category_id = $mysqli->insert_id;
 			fwrite($new_categories,$category_id.PHP_EOL);
 		}
@@ -116,7 +121,6 @@ foreach($files as $key=>$value){
 			$row = $result->fetch_assoc();
 			$category_id=$row['categories_id'];
 		}
-
 		$result = $mysqli->query("select manufacturers_id from `manufacturers` where `manufacturers_name` = '".$manu_name."'") or die("Error getting manufacturer id");
 		//Create a new row in manufacturers if needed
 		if($result->num_rows == 0){
@@ -128,30 +132,28 @@ foreach($files as $key=>$value){
 			$row = $result->fetch_assoc();
 			$manu_id=$row['manufacturers_id'];
 		}
-		$select = "SELECT * FROM `".$table_name."` WHERE `products_model`='".$tokens[0]."'";
+		$select = "SELECT * FROM `final` WHERE `products_model`='".$sku."'";
 		$result = $mysqli->query($select) or die("Could not search rows");
 		if($result->num_rows == 0)
 		{//If it is a new entry show it in n.txt
 			fwrite($new_products,$line);
 			$query = "insert into `final`(`products_model`,`Prod_ID`,`Prod_model`,`Parent_ID`,`Prod_Status`,`Prod_tax`,`Prod_sort`,
-				`Prod_lang`, `Product_Name`, `Manufacturer`, `Manuf_number`, `Manu_ID lookup`, `ProductDescription1`, `Images`, `Images_MED`, `Images_MED`,
+				`Prod_lang`, `Product_Name`, `Manufacturer`, `Manuf_number`, `Manu_ID lookup`, `ProductDescription1`, `Images`, `Images_MED`, `Images_LRG`,
 				`ShippingWeight`, `Weight`, `Caliber`, `Velocity`, `InStockQuantity`, `QBItem`, `WNet`, `CAD`, `GST`, `Duty 6.5%`, `Shipping`, `Cad_COST`, `CAD_Selling`,`SmallImageURL`,
 				`Prod_Category`, `PRODUCT_CAY_NUM`, `CATEGORY`, `CATNUM`, `AI`, `AJ`, `SKU`, `Category1`) values(
-				'".$sku."','0','1','1','0','1','','','".$productname."','".$manu_name."','".$manu_id."','','','',
+				'".$sku."','0','1','1','0','1','','','".$productname."','".$manu_name."','".$manu_id."','',
 				'".$description."','".$mainimageurl."','".$mainimageurl."','".$mainimageurl."','".$shippingweight."','','','','".$instockquantity."','','".$wnet."','','','','','','',
 				'".$smallimageurl."','".$category_name."','".$category_id."','".$category_name."','".$category_id."','','','','')";
 			$mysqli->query($query)  or die("Could not insert row into final table");	
 		}
 		else 
 		{
-			$query = "update `final` set `Product_Name` = '".$productname."', `Manufacturer`='".$manu_name."', `Manuf_number`='".$manu_id."' `ProductDescription1`='".$description."',
+			$query = "update `final` set `Product_Name` = '".$productname."', `Manufacturer`='".$manu_name."', `Manuf_number`='".$manu_id."', `ProductDescription1`='".$description."',
 			`Images` = '".$mainimageurl."', `Images_MED` = '".$mainimageurl."', `Images_LRG` = '".$mainimageurl."', `ShippingWeight`='".$shippingweight."', 
 			`InStockQuantity` = '".$instockquantity."', `WNet` = '".$wnet."', `SmallImageURL` = '".$smallimageurl."', `Prod_Category`
 			= '".$category_name."', `PRODUCT_CAY_NUM` = '".$category_id."', `CATEGORY` = '".$category_name."', `CATNUM` = '".$category_id."' where `products_model` = '".$sku."'";;
 			$mysqli->query($query)  or die("Could not update rows of final table");	
 		}
-		echo " Processed ".$tokens[0]." => ".$tokens[17].'<br/>';
-		$line_no++;
 	}
 	//Delete items with zero cost;
 	$mysqli->query("DELETE FROM `final` WHERE `WNet` = '0';") or die("Error deleting ");
@@ -159,6 +161,8 @@ foreach($files as $key=>$value){
 	fclose($new_manufacturers);
 	fclose($new_categories);
 	fclose($txt_file);
+
+	//Export and allow user to download
 	foreach($files as $key=>$value){
 		$file = fopen(getcwd().'/output/'.$key,"w");
 		$result = $mysqli->query("select * from ".$value) or die("Error fetching rows of table ".$value);
