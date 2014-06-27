@@ -5,6 +5,7 @@ if ( isset($_POST["submit"]) ) {
 $path=getcwd().'/upload/';
 if ($handle = opendir($path)) {
     while (false !== ($entry = readdir($handle))) {
+    	if(strpos($entry, ".csv") !==false || strpos($entry,".txt")!==false)
 	unlink($path.$entry);
     }
     closedir($handle);
@@ -70,6 +71,7 @@ foreach($files as $key=>$value){
 	$path=getcwd().'/output/';
 	if ($handle = opendir($path)) {
 	    while (false !== ($entry = readdir($handle))) {
+	    	if(strpos($entry, ".csv") !==false || strpos($entry,".txt")!==false)
 		unlink($path.$entry);
 	    }
 	    closedir($handle);
@@ -171,9 +173,9 @@ foreach($files as $key=>$value){
 				$arrayvals = array_values($row);
 				$line = '`'.implode("`;`",$arrayvals).'`';
 				fwrite($file,$line.PHP_EOL);
-				echo $line;
 			}
 			fclose($file);
+			echo 'Output '.$key." <a target='_blank' href='download.php?file=".$key."'>".$key."</a><br/>";
 		}
 // 		$mysqli->query("SELECT CONCAT(GROUP_CONCAT(COLUMN_NAME SEPARATOR ';'), '\n')
 // FROM INFORMATION_SCHEMA.COLUMNS
