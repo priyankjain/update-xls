@@ -27,7 +27,7 @@ foreach($files as $key=>$value){
              else {
                     //Store file in directory "upload" with the name of "uploaded_file.txt"
             move_uploaded_file($_FILES[$value]["tmp_name"], "upload/" . $key);
-            echo "Stored in: " . "upload/" . $_FILES[$value]["name"] . "<br />";
+            // echo "Stored in: " . "upload/" . $_FILES[$value]["name"] . "<br />";
             }
         }
      } else {
@@ -186,7 +186,7 @@ foreach($files as $key=>$value){
 				$count++;
 			}
 			fclose($file);
-			echo 'Lines: '.$count.' Output '.$key." <a target='_blank' href='download.php?file=".$key."'>".$key."</a><br/>";
+			echo 'Output '.$key." <a target='_blank' href='download.php?file=".$key."'>".$key."</a><br/>";
 		}
 // 		$mysqli->query("SELECT CONCAT(GROUP_CONCAT(COLUMN_NAME SEPARATOR ';'), '\n')
 // FROM INFORMATION_SCHEMA.COLUMNS
