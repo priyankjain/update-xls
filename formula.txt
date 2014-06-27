@@ -1,0 +1,5 @@
+CAD = wnet*1.0785
+gst = CAD * 0.5%
+duty = (cad+gst)*0.065
+shipping = 2
+cad_cost = cad + gst + duty + shipping

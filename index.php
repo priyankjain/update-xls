@@ -10,9 +10,16 @@ if ($handle = opendir($path)) {
     }
     closedir($handle);
 }
-
+if(isset($_POST['exchange']) && is_numeric($_POST['exchange']))
+$exchange = $_POST['exchange'];
+else {
+	echo 'Please enter exchange rate of USD to CAD';
+	exit;
+}
+$shipping = (isset($_POST['shipping']) && is_numeric($_POST['shipping']))?$_POST['shipping']:2;
+$multiplier = (isset($_POST['multiplier']) && is_numeric($_POST['multiplier']))?$_POST['multiplier']:1.2;
 //Upload the files to upload folder
-$files = array("dealer.txt"=>"dealer_file","final.csv"=>"final_file","categories_description.csv"=>"categories_file","manufacturers.csv"=>"manu_file");
+$files = array("dealer.txt"=>"dealer_file","final.csv"=>"final_file","categories_description.csv"=>"categories_file","manufacturers.csv"=>"manu_file","categories.csv"=>"cat_file","manufacturers_info.csv"=>"manu_info_file");
 foreach($files as $key=>$value){
    if ( isset($_FILES[$value])) {
             //if there was an error uploading the file
@@ -42,7 +49,7 @@ foreach($files as $key=>$value){
 		echo 'Error connecting to database';
 		exit;
 	}
-	$files = array("final.csv"=>"final","categories_description.csv"=>'categories_description',"manufacturers.csv"=>'manufacturers');
+	$files = array("final.csv"=>"final","categories_description.csv"=>'categories_description',"manufacturers.csv"=>'manufacturers',"manufacturers_info.csv"=>"manufacturers_info","categories.csv"=>"categories");
 	foreach($files as $key=>$value){
 		$file = $path.$key;
 		$fp = fopen($file, 'r');
@@ -89,12 +96,16 @@ foreach($files as $key=>$value){
 		$tokens= explode("\t",$line);
 		$col=36;
 		$sku = $tokens[0];
+		if($tokens[1]=="") break;
 		$productname = $tokens[1];
+
 		$description = $tokens[3];
 		$url = $tokens[6];
 		$url = explode("/",$url);
 		$mainimageurl = "pyr/".end($url);
 		$shippingweight = $tokens[7];
+		$caliber = $tokens[8];
+		$velocity = $tokens[9];
 		$instockquantity = $tokens[15];
 		$wnet = $tokens[17];
 		$url = $tokens[18];
@@ -122,6 +133,10 @@ foreach($files as $key=>$value){
 			echo $category_name;
 			$mysqli->query("insert into `categories_description`(`language_id`,`categories_name`,`categories_heading_title`,`categories_description`,`categories_head_title_tag`,`categories_head_desc_tag`,`categories_head_keywords_tag`,`categories_htc_title_tag`,`categories_htc_desc_tag`,`categories_htc_keywords_tag`,`categories_htc_description`) values('1','".$category_name."','".$category_name."','','','','','','','','');") or die("Error inserting new category"); 
 			$category_id = $mysqli->insert_id;
+			$result = $mysqli->query("select * from `categories` where `categories_id`=".$category_id);
+			if($result->num_rows == 0){
+				$mysqli->query("insert into `categories` values(".$category_id.",'','9','0','".date('Y-m-d H:i:s')."','".date('Y-m-d H:i:s')."')");
+			}
 			fwrite($new_categories,$category_id.PHP_EOL);
 		}
 		else {
@@ -133,37 +148,56 @@ foreach($files as $key=>$value){
 		if($result->num_rows == 0){
 			$mysqli->query("insert into `manufacturers`(`manufacturers_name`,`manufacturers_image`,`date_added`,`last_modified`) values('".$manu_name."','','".date('Y-m-d H:i:s')."','".date('Y-m-d H:i:s')."')") or die("Error inserting new manufacturer"); 
 			$manu_id = $mysqli->insert_id;
+			$result = $mysqli->query("select * from `manufacturers_info` where `manufacturers_id`=".$manu_id);
+			if($result->num_rows == 0){
+				$mysqli->query("insert into `manufacturers_info` values(".$manu_id.",'1','','0','".date('Y-m-d H:i:s')."','','','')");
+			}
 			fwrite($new_manufacturers,$manu_id.PHP_EOL);
 		}
 		else {
 			$row = $result->fetch_assoc();
 			$manu_id=$row['manufacturers_id'];
 		}
-		$select = "SELECT * FROM `final` WHERE `products_model`='".$sku."'";
+		$cad = $wnet*$exchange;
+		$gst = $cad*0.005;
+		$duty = ($cad+$gst)*0.065;
+		$cad_cost = $cad + $gst + $duty + $shipping;
+		$cad_selling = $cad_cost * $multiplier;
+		$cad = sprintf("%.2f", $cad);
+		$gst = sprintf("%.2f", $gst);
+		$duty = sprintf("%.2f", $duty);
+		$cad_cost = sprintf("%.2f", $cad_cost);
+		$cad_selling = sprintf("%.2f", $cad_selling);
+		$shipping = sprintf("%.2f", $shipping);
+		$select = "SELECT * FROM `final` WHERE `Prod_model`='".$sku."'";
 		$result = $mysqli->query($select) or die("Could not search rows");
 		if($result->num_rows == 0)
 		{//If it is a new entry show it in n.txt
 			fwrite($new_products,$line);
-			$query = "insert into `final`(`products_model`,`Prod_ID`,`Prod_model`,`Parent_ID`,`Prod_Status`,`Prod_tax`,`Prod_sort`,
-				`Prod_lang`, `Product_Name`, `Manufacturer`, `Manuf_number`, `Manu_ID lookup`, `ProductDescription1`, `Images`, `Images_MED`, `Images_LRG`,
-				`ShippingWeight`, `Weight`, `Caliber`, `Velocity`, `InStockQuantity`, `QBItem`, `WNet`, `CAD`, `GST`, `Duty 6.5%`, `Shipping`, `Cad_COST`, `CAD_Selling`,`SmallImageURL`,
-				`Prod_Category`, `PRODUCT_CAY_NUM`, `CATEGORY`, `CATNUM`, `AI`, `AJ`, `SKU`, `Category1`) values(
-				'".$sku."','0','1','1','0','1','','','".$productname."','".$manu_name."','".$manu_id."','',
-				'".$description."','".$mainimageurl."','".$mainimageurl."','".$mainimageurl."','".$shippingweight."','','','','".$instockquantity."','','".$wnet."','','','','','','',
-				'".$smallimageurl."','".$category_name."','".$category_id."','".$category_name."','".$category_id."','','','','')";
+			$query = "insert into `final`(`Prod_model`,`Parent_ID`,`Prod_Status`,`Prod_tax`,`Prod_sort`,
+				`Prod_lang`, `Product_Name`, `Manufacturer`, `Manuf_number`, `ProductDescription1`, `Images`, `Images_MED`, `Images_LRG`,
+				`Weight`, `Caliber`, `Velocity`, `InStockQuantity`, `WNet`, `CAD`, `GST`, `Duty 6.5%`, `Shipping`, `Cad_COST`, `CAD_Selling`,`SmallImageURL`,
+				`Prod_Category`, `PRODUCT_Cat_number`) values(
+				'".$sku."','0','1','1','0','1','".$productname."','".$manu_name."','".$manu_id."',
+				'".$description."','".$mainimageurl."','".$mainimageurl."','".$mainimageurl."','".$shippingweight."','','','".$instockquantity."','".$wnet."','".$cad."','".$gst."','".$duty."','".$shipping."','".$cad_cost."','".$cad_selling."',
+				'".$smallimageurl."','".$category_name."','".$category_id."')";
 			$mysqli->query($query)  or die("Could not insert row into final table");	
 		}
 		else 
 		{
 			$query = "update `final` set `Product_Name` = '".$productname."', `Manufacturer`='".$manu_name."', `Manuf_number`='".$manu_id."', `ProductDescription1`='".$description."',
-			`Images` = '".$mainimageurl."', `Images_MED` = '".$mainimageurl."', `Images_LRG` = '".$mainimageurl."', `ShippingWeight`='".$shippingweight."', 
-			`InStockQuantity` = '".$instockquantity."', `WNet` = '".$wnet."', `SmallImageURL` = '".$smallimageurl."', `Prod_Category`
-			= '".$category_name."', `PRODUCT_CAY_NUM` = '".$category_id."', `CATEGORY` = '".$category_name."', `CATNUM` = '".$category_id."' where `products_model` = '".$sku."'";;
+			`Images` = '".$mainimageurl."', `Images_MED` = '".$mainimageurl."', `Images_LRG` = '".$mainimageurl."', `Weight`='".$shippingweight."', `Caliber`='".$caliber."', `Velocity`='".$velocity."', 
+			`InStockQuantity` = '".$instockquantity."', `WNet` = '".$wnet."', `CAD` = '".$cad."', `GST` = '".$gst."', `Duty 6.5%` = '".$duty."', `Shipping` = '".$shipping."', `CAD_COST` = '".$cad_cost."', `CAD_Selling` = '".$cad_selling."', `SmallImageURL` = '".$smallimageurl."', `Prod_Category`
+			= '".$category_name."', `PRODUCT_Cat_number` = '".$category_id."' where `Prod_model` = '".$sku."'";
+			// echo $query;
 			$mysqli->query($query)  or die("Could not update rows of final table");	
 		}
 	}
 	//Delete items with zero cost;
-	$mysqli->query("DELETE FROM `final` WHERE `WNet` = '0';") or die("Error deleting ");
+	// $result=$mysqli->query("select * from `final` where WNet like '0.00';");
+	// echo $result->num_rows;
+	// var_dump($result);
+	$mysqli->query("DELETE FROM `final` WHERE `WNet` like '0.00';") or die("Error deleting ");
 	fclose($new_products);
 	fclose($new_manufacturers);
 	fclose($new_categories);
@@ -203,25 +237,49 @@ else
 <form action="<?php echo $_SERVER["PHP_SELF"]; ?>" method="post" enctype="multipart/form-data">
 
 <tr>
-<td width="20%">Select dealer.txt file</td>
-<td width="80%"><input type="file" name="dealer_file" id="dealer_file" /></td>
+<td width="40%">1 USD is how much in CAD?</td>
+<td width="60%"><input type="text" name="exchange" id="exchange" /></td>
 </tr>
 
 <tr>
-<td width="20%">Select final.csv file </td>
-<td width="80%"><input type="file" name="final_file" id="final_file" /></td>
+<td width="40%">Shipping cost is how much in CAD? (default is 2)</td>
+<td width="60%"><input type="text" name="shipping" id="shipping" /></td>
 </tr>
 
 <tr>
-<td width="20%">Select categories_description.csv file</td>
-<td width="80%"><input type="file" name="categories_file" id="categories_file" /></td>
+<td width="40%">CAD_SELLING = ? x CAD_COST (default is 1.2)</td>
+<td width="60%"><input type="text" name="multiplier" id="multiplier" /></td>
 </tr>
 
 <tr>
-<td width="20%">Select manufacturers.csv file</td>
-<td width="80%"><input type="file" name="manu_file" id="manu_file" /></td>
+<td width="40%">Select dealer.txt file</td>
+<td width="60%"><input type="file" name="dealer_file" id="dealer_file" /></td>
 </tr>
 
+<tr>
+<td width="40%">Select final.csv file </td>
+<td width="60%"><input type="file" name="final_file" id="final_file" /></td>
+</tr>
+
+<tr>
+<td width="40%">Select categories_description.csv file</td>
+<td width="60%"><input type="file" name="categories_file" id="categories_file" /></td>
+</tr>
+
+<tr>
+<td width="40%">Select categories.csv file</td>
+<td width="60%"><input type="file" name="cat_file" id="categories_file" /></td>
+</tr>
+
+<tr>
+<td width="40%">Select manufacturers.csv file</td>
+<td width="60%"><input type="file" name="manu_file" id="manu_file" /></td>
+</tr>
+
+<tr>
+<td width="40%">Select manufacturers_info.csv file</td>
+<td width="60%"><input type="file" name="manu_info_file" id="categories_file" /></td>
+</tr>
 <tr>
 <td>Submit</td>
 <td><input type="submit" name="submit" /></td>
