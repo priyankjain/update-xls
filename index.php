@@ -85,7 +85,9 @@ foreach($files as $key=>$value){
 	}
 	$txt_file=fopen(getcwd()."/upload/dealer.txt","r");
 	$line = fgets($txt_file);
-	$new_products=fopen(getcwd()."/output/new_products.txt","w");
+	$new_products=fopen(getcwd()."/output/new_products.csv","w");
+	$tokens= explode("\t",$line);
+	fwrite($new_products,'`'.implode("`;`",$tokens).'`'.PHP_EOL);
 	$new_categories=fopen(getcwd()."/output/new_categories.txt","w");
 	$new_manufacturers=fopen(getcwd()."/output/new_manufacturers.txt","w");
 	$line_no = 1;
@@ -173,7 +175,7 @@ foreach($files as $key=>$value){
 		$result = $mysqli->query($select) or die("Could not search rows");
 		if($result->num_rows == 0)
 		{//If it is a new entry show it in n.txt
-			fwrite($new_products,$line);
+			fwrite($new_products,'`'.implode("`;`",$tokens).'`'.PHP_EOL);
 			$query = "insert into `final`(`Prod_model`,`Parent_ID`,`Prod_Status`,`Prod_tax`,`Prod_sort`,
 				`Prod_lang`, `Product_Name`, `Manufacturer`, `Manuf_number`, `ProductDescription1`, `Images`, `Images_MED`, `Images_LRG`,
 				`Weight`, `Caliber`, `Velocity`, `InStockQuantity`, `WNet`, `CAD`, `GST`, `Duty 6.5%`, `Shipping`, `Cad_COST`, `CAD_Selling`,`SmallImageURL`,
